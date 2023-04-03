@@ -5,15 +5,12 @@ from lib import ssd1306
 import os
 from time import sleep
 import math
-from lib import axp202
-from machine import Pin
+from lib import gps
+from machine import UART
 
 print("Running main")
 print("Testing the display (SSD1306 controller)")
 
-pmu=axp202.PMU()
-pmu.setDC1Voltage(3300)
-pmu.enablePower(axp202.AXP192_DCDC1)
 
 # Test Display SSD1306 controller
 # ESP32 Pin assignment
@@ -33,11 +30,12 @@ pmu.enablePower(axp202.AXP192_DCDC1)
 # oled.plot(1,pdata)
 # oled.show()
 
-test=Pin('G39', mode=Pin.IN)
-value1=0
-print(value1)
+my_gps=gps.GPS()
+gps_uart=UART(2, pins=(gps.GPS_TX_PIN, gps.GPS_RX_PIN))
 while True:
-    var_test=test()
-    if var_test!=value1:
-        value1=var_test
-        print(value1)
+    line=gps_uart.readline()
+    if line!=None:
+        my_gps.update(line)
+        print(my_gps.latitude_string())
+        print(my_gps.longitude_string())
+        print(my_gps.compass_direction())
