@@ -3,11 +3,13 @@ from machine import Pin
 class DoorSensor:
     def __init__(self, pin, callback=None):
         def pin_handler(pin):
-            self.__value=pin()
-            if callback:
-                callback(self.open)
+            value=pin()
+            if self.__value != value:
+                self.__value=value
+                if callback:
+                    callback(self.open)
         self.pin=Pin(pin, mode=Pin.IN)
-        self.pin.callback(Pin.IRQ_RAISING | Pin.IRQ_FALLING, pin_handler)
+        self.pin.callback(Pin.IRQ_RISING | Pin.IRQ_FALLING, pin_handler)
         self.__value=self.pin()
 
     @property

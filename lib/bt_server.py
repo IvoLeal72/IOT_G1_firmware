@@ -1,45 +1,61 @@
+from lib.ble_util import BluetoothUuid
 from network import Bluetooth
-from machine import Pin
 
-i=250
-led=Pin('G4', mode=Pin.OUT)
-led(1)
+SERVICE_UUID = BluetoothUuid.to_bytes_le(
+    '581f6305-2e3e-43c0-918f-daaba87370e0')
+CHR_UUID = BluetoothUuid.to_bytes_le(
+    'f41f77d9-5f18-4b03-92f0-c71a268b4b0a')
 
-def conn_cb(chr):
-    events = chr.events()
-    if events & Bluetooth.CLIENT_CONNECTED:
-        print('client connected')
-    elif events & Bluetooth.CLIENT_DISCONNECTED:
-        led(1)
-        print('client disconnected')
 
-def chr1_handler(chr, data):
-    global i
-    events = chr.events()
-    print(data)
-    if events & Bluetooth.CHAR_READ_EVENT:
-        chr.value(i)
-        print("transmitted :", hex(i))
-        i=i+1
-    if events & Bluetooth.CHAR_WRITE_EVENT:
-        i=int.from_bytes(data[1], 'little')
-        print("Received: ", hex(i))
-        if i==0x72:
-            led(0)
-            
+class BTServer:
 
-def main():
-    bluetooth = Bluetooth()
-    bluetooth.set_advertisement(name='G1 t-beam', service_uuid=0xec00)
+    def __init__(self, name: str, callback=None, card_list=None):
+        def conn_handler(bt):
+            events = bt.events()
+            if events & Bluetooth.CLIENT_DISCONNECTED:
+                self.state = 'waiting'
 
-    bluetooth.callback(trigger=Bluetooth.CLIENT_CONNECTED | Bluetooth.CLIENT_DISCONNECTED, handler=conn_cb)
-    bluetooth.advertise(True)
+        def chr1_handler(chr, data):
+            events = chr.events()
+            if events & Bluetooth.CHAR_WRITE_EVENT:
+                if self.state in ('granted', 'denied'):
+                    return
+                card = data[1].decode('ASCII')
+                valid = False
+                if card in self.card_list:
+                    valid = True
+                self.state = 'granted' if valid else 'denied'
+                if self.callback:
+                    self.callback(valid)
+                chr.value(self.state)
 
-    srv1 = bluetooth.service(uuid=0xec00, isprimary=True, nbr_chars=1)
+        self.state = 'waiting'
+        if card_list is not None:
+            self.card_list = card_list
+        else:
+            self.card_list = []
+        self.callback = callback
+        bt = Bluetooth()
+        bt.set_advertisement(
+            name=name, service_uuid=SERVICE_UUID)
+        bt.callback(trigger=Bluetooth.CLIENT_DISCONNECTED,
+                    handler=conn_handler)
+        bt.advertise(True)
+        srv1 = bt.service(uuid=SERVICE_UUID,
+                          isprimary=True, nbr_chars=1)
+        chr1 = srv1.characteristic(uuid=CHR_UUID)
+        chr1.callback(trigger=(Bluetooth.CHAR_WRITE_EVENT),
+                      handler=chr1_handler)
 
-    chr1 = srv1.characteristic(uuid=0xec0e, value='my_value') 
+    def add_card(self, card):
+        self.card_list.append(card)
 
-    chr1.callback(trigger=(Bluetooth.CHAR_READ_EVENT | Bluetooth.CHAR_WRITE_EVENT), handler=chr1_handler)
+    def remove_card(self, card) -> bool:
+        try:
+            self.card_list.remove(card)
+            return True
+        except ValueError:
+            return False
 
-if __name__=='__main__':
-    main()
+    def update_card_list(self, card_list):
+        self.card_list = card_list

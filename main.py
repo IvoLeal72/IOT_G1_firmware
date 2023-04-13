@@ -1,16 +1,3 @@
-# display.py -- Test displays with ssd1306 controller
-import time
-from machine import I2C
-from lib import ssd1306
-import os
-from time import sleep
-import math
-from lib import gps
-from machine import UART
-
-print("Running main")
-print("Testing the display (SSD1306 controller)")
-
 
 # Test Display SSD1306 controller
 # ESP32 Pin assignment
@@ -30,12 +17,24 @@ print("Testing the display (SSD1306 controller)")
 # oled.plot(1,pdata)
 # oled.show()
 
-my_gps=gps.GPS()
-gps_uart=UART(2, pins=(gps.GPS_TX_PIN, gps.GPS_RX_PIN))
-while True:
-    line=gps_uart.readline()
-    if line!=None:
-        my_gps.update(line)
-        print(my_gps.latitude_string())
-        print(my_gps.longitude_string())
-        print(my_gps.compass_direction())
+# my_gps=gps.GPS()
+# gps_uart=UART(2, pins=(gps.GPS_TX_PIN, gps.GPS_RX_PIN))
+# while True:
+#     line=gps_uart.readline()
+#     if line!=None:
+#         my_gps.update(line)
+#         print(my_gps.latitude_string())
+#         print(my_gps.longitude_string())
+#         print(my_gps.compass_direction())
+
+#from lib.door_sensor import DoorSensor
+#ds=DoorSensor('G36', lambda x: print(x))
+
+#from lib.tamper import Tamper
+#tamp=Tamper('G39', lambda x: print(x))
+
+#from lib.door_control import DoorControl
+#dc=DoorControl('G0')
+
+from lib.bt_server import BTServer
+bt=BTServer('t1 g1', lambda x:print(x), ['12346'])
