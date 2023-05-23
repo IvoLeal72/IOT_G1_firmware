@@ -2,7 +2,7 @@ from machine import Pin
 
 class DoorControl:
     def __init__(self, pin):
-        self.pin=Pin(pin, mode=Pin.OUT)
+        self.pin=pin
         self.pin(1)
 
     def open(self):

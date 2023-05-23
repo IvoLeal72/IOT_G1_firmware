@@ -1,4 +1,3 @@
-from datetime import datetime
 from machine import Pin
 import utime
 
@@ -11,7 +10,7 @@ class DoorSensor:
                 self.__value = value
                 if callback:
                     callback(self.open)
-        self.pin = Pin(pin, mode=Pin.IN)
+        self.pin = pin
         self.pin.callback(Pin.IRQ_RISING | Pin.IRQ_FALLING, pin_handler)
         self.__value = self.pin()
         if check:

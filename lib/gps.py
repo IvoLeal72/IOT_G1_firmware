@@ -7,7 +7,7 @@ GPS_TX_PIN = 'G12'
 
 class GPS(micropyGPS.MicropyGPS):
     def __init__(self):
-        super(location_formatting='dd')
+        super().__init__(location_formatting='dd')
         axp = axp202.PMU()
         axp.setLDO3Voltage(3300)
         axp.enablePower(axp202.AXP192_LDO3)

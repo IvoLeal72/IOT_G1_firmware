@@ -3,7 +3,7 @@ from machine import Pin, Timer
 
 class Tamper:
     def __init__(self, pin, active=False):
-        self.pin = Pin(pin, mode=Pin.IN)
+        self.pin = pin
         self.__active = active
         if not active:
             self.enable_interrupt()
