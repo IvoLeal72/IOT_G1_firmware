@@ -1,0 +1,21 @@
+{
+    "description":"hw_state_handler",
+    "subject": {
+        "entities":[
+            {
+                "idPattern":".*",
+                "type":"Device"
+            }
+        ],
+        "condition" : { 
+            "attrs" : [ "hw_state" ],
+            "expression": {"q" : "hw_state!=0"}
+        }
+    },
+    "notification":{
+        "http":{
+            "url":"http://NodeRed:1880/hw_state_handler"
+        },
+        "attrs" : [ "hw_state" ]
+    }
+}

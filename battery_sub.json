@@ -1,0 +1,21 @@
+{
+    "description":"battery_handler",
+    "subject": {
+        "entities":[
+            {
+                "idPattern":".*",
+                "type":"Device"
+            }
+        ],
+        "condition" : { 
+            "attrs" : [ "battery" ],
+            "expression": {"q" : "battery!=null"}
+        }
+    },
+    "notification":{
+        "http":{
+            "url":"http://NodeRed:1880/battery_handler"
+        },
+        "attrs" : [ "battery" ]
+    }
+}

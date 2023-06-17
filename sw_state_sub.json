@@ -1,0 +1,21 @@
+{
+    "description":"sw_state_handler",
+    "subject": {
+        "entities":[
+            {
+                "idPattern":".*",
+                "type":"Device"
+            }
+        ],
+        "condition" : { 
+            "attrs" : [ "sw_state" ],
+            "expression": {"q" : "sw_state!=0"}
+        }
+    },
+    "notification":{
+        "http":{
+            "url":"http://NodeRed:1880/sw_state_handler"
+        },
+        "attrs" : [ "sw_state" ]
+    }
+}

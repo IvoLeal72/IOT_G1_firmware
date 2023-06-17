@@ -1,0 +1,21 @@
+{
+    "description":"granted_open_request_handler",
+    "subject": {
+        "entities":[
+            {
+                "idPattern":".*",
+                "type":"Device"
+            }
+        ],
+        "condition" : { 
+            "attrs" : [ "open_request_response" ],
+            "expression": {"q" : "open_request_response==true"}
+        }
+    },
+    "notification":{
+        "http":{
+            "url":"http://NodeRed:1880/granted_open_request_handler"
+        },
+        "attrs" : [ "open_request_response" ]
+    }
+}

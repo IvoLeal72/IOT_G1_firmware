@@ -1,0 +1,21 @@
+{
+    "description":"open_reg_handler",
+    "subject": {
+        "entities":[
+            {
+                "idPattern":".*",
+                "type":"Device"
+            }
+        ],
+        "condition" : { 
+            "attrs" : [ "open_reg" ],
+            "expression": {"q" : "open_reg!=null"}
+        }
+    },
+    "notification":{
+        "http":{
+            "url":"http://NodeRed:1880/open_reg_handler"
+        },
+        "attrs" : [ "open_reg" ]
+    }
+}

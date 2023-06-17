@@ -41,13 +41,89 @@
 
 import machine
 from machine import Pin
+import utime
+import pycom
 from lib import settings
+from lib.door_sensor import DoorSensor, DoorSensorEvent, MemoryDoorSensorEvent
+from lib.tamper import Tamper
+from lib.door_control import DoorControl
+from lib.bt_server import BTServer
+from lib import gps
 from network import LoRa
 from lib import axp202
 import socket
 import ubinascii
 import struct
 from lib.ubitstring import Bits
+
+
+ds_events = []
+
+
+def door_sensor_handler(open):
+    ds_events.append(DoorSensorEvent(open))
+
+
+def bt_cred_handler(valid):
+    pass
+
+
+def get_saved_events():
+    saved_events=0
+    try:
+        saved_events = pycom.nvs_get('e_count')
+    except ValueError:
+        pass
+    mem_events = []
+    for i in range(saved_events):
+        mem_events.append(MemoryDoorSensorEvent(pycom.nvs_get('e'+str(i))))
+    return mem_events
+
+
+def save_events():
+    if not ds_events:
+        return
+    my_gps = gps.GPS()
+    gps_uart = machine.UART(2, pins=(gps.GPS_TX_PIN, gps.GPS_RX_PIN))
+    while True:
+        line = gps_uart.readline()
+        if line != None:
+            my_gps.update(line)
+            if my_gps.timestamp[0] != 0:
+                break
+            
+    hours, minutes, seconds=my_gps.timestamp
+    seconds=int(seconds)
+    day, month, year=my_gps.date
+    year+=2000
+
+    ts = utime.mktime((year, month, day, hours, minutes, seconds, None, None))
+    ts_ticks = my_gps.fix_time
+    saved_events = pycom.nvs_get('e_count')
+    if saved_events is None:
+        saved_events = 0
+    for event in ds_events:
+        pycom.nvs_set('e'+str(saved_events), event.to_memory(ts, ts_ticks))
+
+
+def shutdown():
+    machine.pin_sleep_wakeup([settings.TAMPER_SENSOR, settings.DOOR_SENSOR, settings.BTN_PIN], mode=machine.WAKEUP_ANY_HIGH)
+    machine.deepsleep()
+    while True:
+        print('UPS')
+
+
+reason, detail = machine.wake_reason()
+print(machine.rng())
+
+while False:
+    pass
+
+
+has_tamper = False
+check_ds = False
+enable_bt = False
+send_events = False
 
 payload=Bits()
 payload+=Bits(uint=settings.HW_VERSION, length=2)
@@ -66,8 +142,41 @@ if voltage>5000:
     voltage=5000
 voltage_cod=int((voltage/10-250)/2) & 0x7f
 payload+=Bits(uint=voltage_cod, length=7)
+# payload+=Bits(uint=0b000000001, length=9)
+# payload+=Bits(uint=0b000000010, length=9)
+# payload+=Bits(uint=0b001011, length=6)
+# payload+=Bits(uint=0b001100, length=6)
+# payload+=Bits(uint=0x200ff, length=19)
+# payload+=Bits(uint=0x2000f, length=19)
+# payload+=Bits(uint=0b011100000000000000000, length=21)
+# payload+=Bits(uint=0b011000000000000000001, length=21)
+# payload+=Bits(uint=0b111, length=3)
+
+tamper_pin=Pin(settings.TAMPER_SENSOR, mode=Pin.IN)
+ds_pin=Pin(settings.DOOR_SENSOR, mode=Pin.IN)
+dc_pin=Pin(settings.DOOR_RELAY, mode=Pin.OUT)
+dc_pin(1)
+btn_pin=Pin(settings.BTN_PIN, mode=Pin.IN)
+
+if reason == machine.PIN_WAKE:
+    detail=[x.id() for x in detail]
+    if tamper_pin.id() in detail:
+        has_tamper = True
+    if ds_pin.id() in detail:
+        check_ds = True
+    if btn_pin.id() in detail:
+        enable_bt = True
+if reason == machine.RTC_WAKE:
+    send_events = True
+
+if not send_events and machine.remaining_sleep_time() < 15*60*1000:
+    send_events = True
 
 
+
+tamper = Tamper(tamper_pin, has_tamper)
+door_sensor = DoorSensor(ds_pin, door_sensor_handler, check_ds)
+door_control = DoorControl(dc_pin)
 
 
 lora = LoRa(mode=LoRa.LORAWAN, region=LoRa.EU868, tx_retries=4)
@@ -101,8 +210,6 @@ payload+=Bits(uint=0b001, length=3)+Bits(uint=3, length=3) #hw alarms
 payload+=Bits(uint=0b000, length=3)+Bits(uint=2, length=6) #sw alarms
 payload+=Bits(uint=0b000, length=3)+Bits(uint=4, length=6) #sw alarms
 
-payload+=Bits(uint=0b010, length=3)+Bits(uint=72, length=16) #open_request
-
 payload+=Bits(uint=0b111, length=3)
 
 machine.sleep(1000)
@@ -117,6 +224,7 @@ for i in range(2):
 led=Pin('G4', mode=Pin.OUT)
 led(0)
 #print('done')
+save_events()
 while True:
     pass
 #shutdown()
